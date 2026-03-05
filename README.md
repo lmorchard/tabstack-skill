@@ -1,17 +1,25 @@
 # tabstack — OpenClaw Skill
 
 An [OpenClaw](https://docs.openclaw.ai/) skill that gives your agent web
-browsing, data extraction, content transformation, and browser automation
-capabilities via the [Tabstack API](https://docs.tabstack.ai/).
+browsing, data extraction, content transformation, web research, and browser
+automation capabilities via the [Tabstack API](https://docs.tabstack.ai/).
+
+Uses `@tabstack/sdk` v2.
 
 ## What It Does
 
-| Command            | Purpose                                  | Cost    |
-|--------------------|------------------------------------------|---------|
-| `extract-markdown` | Read a page as clean Markdown            | Lowest  |
-| `extract-json`     | Pull structured data from a page         | Medium  |
-| `generate`         | AI-transform web content into JSON shape | Medium  |
-| `automate`         | Multi-step browser automation            | Highest |
+| Command            | Purpose                                  | Cost    | Timeout |
+|--------------------|------------------------------------------|---------|---------|
+| `extract-markdown` | Read a page as clean Markdown            | Lowest  | 60s     |
+| `extract-json`     | Pull structured data from a page         | Medium  | 60s     |
+| `generate`         | AI-transform web content into JSON shape | Medium  | 60s     |
+| `research`         | AI-powered multi-source web research     | Medium  | 420s    |
+| `automate`         | Multi-step browser automation            | Highest | 420s    |
+
+All commands support `--geo CC` for region-specific content (ISO country code).
+
+The `automate` command also supports `--guardrails` (safety constraints) and
+`--data` (JSON context for form filling).
 
 ## Requirements
 
@@ -74,8 +82,8 @@ OpenClaw users.
 ```
 tabstack/
 ├── SKILL.md              — Skill definition and agent instructions
-├── tabstack.ts           — CLI wrapper for the Tabstack SDK
-├── package.json          — Dependencies (@tabstack/sdk, tsx)
+├── tabstack.ts           — CLI wrapper for the Tabstack SDK (v2)
+├── package.json          — Dependencies (@tabstack/sdk ^2.2.0, tsx)
 └── references/
     └── examples.md       — JSON schema patterns and generate recipes
 ```
