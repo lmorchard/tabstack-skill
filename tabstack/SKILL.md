@@ -47,7 +47,10 @@ programmatic access to title, author, etc.):
 cd <skill-dir> && npx tsx ./tabstack.ts extract-markdown "<url>" --metadata
 ```
 
-Add `--nocache` to bypass caching and get fresh content.
+Optional flags:
+- `--metadata` — return metadata as a separate JSON block
+- `--nocache` — bypass caching and get fresh content
+- `--geo CC` — fetch from a specific country (ISO 3166-1 alpha-2 code, e.g. `US`, `GB`, `DE`)
 
 ### 2. `extract-json` — Pull structured data from a page
 
@@ -67,6 +70,8 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
 
 Returns a JSON object matching the page content.
 
+Optional flags: `--nocache`, `--geo CC` (same as extract-markdown).
+
 See [references/examples.md](references/examples.md) for common JSON schema
 patterns (products, articles, events, tables, etc.).
 
@@ -85,6 +90,8 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
 
 - `json_schema`: a JSON Schema object (inline JSON string)
 - `instructions`: natural language description of what to produce
+
+Optional flags: `--nocache`, `--geo CC` (same as extract-markdown).
 
 Example — categorise and summarise HN posts:
 ```bash
@@ -110,11 +117,33 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
 Optional flags:
 - `--url <url>` — starting URL for the task
 - `--max-iterations N` — limit steps (default 50, range 1-100)
+- `--geo CC` — fetch from a specific country (e.g. `GB` for UK pricing)
+- `--guardrails "..."` — safety constraints for what the browser agent should
+  NOT do (e.g. `"browse only, don't click buy or submit forms"`)
+- `--data '{"key":"val"}'` — JSON context for form filling (e.g. name, email,
+  address fields the agent should use when filling forms)
 
 Progress is printed to stderr. The final answer is printed to stdout.
 
 **Note:** Automate tasks run a full browser session and may take 10-60 seconds.
 Do not time out early.
+
+Example — fill a contact form with guardrails:
+```bash
+cd <skill-dir> && npx tsx ./tabstack.ts \
+  automate "Fill out the contact form with my information" \
+  --url "https://example.com/contact" \
+  --data '{"name":"Alex","email":"alex@example.com","message":"Hello"}' \
+  --guardrails "Only fill and submit the contact form, do not navigate away"
+```
+
+Example — compare prices across regions:
+```bash
+cd <skill-dir> && npx tsx ./tabstack.ts \
+  extract-json "https://example.com/product" \
+  '{"type":"object","properties":{"price":{"type":"number"},"currency":{"type":"string"}}}' \
+  --geo GB
+```
 
 ## Reference: Examples & Recipes
 

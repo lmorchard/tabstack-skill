@@ -9,10 +9,10 @@
  *   client.agent.automate(task, options?)  — returns async iterable of events
  *
  * Usage:
- *   npx tsx tabstack.ts extract-markdown <url> [--metadata] [--nocache]
- *   npx tsx tabstack.ts extract-json <url> [json_schema] [--nocache]
- *   npx tsx tabstack.ts generate <url> <json_schema> <instructions> [--nocache]
- *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N]
+ *   npx tsx tabstack.ts extract-markdown <url> [--metadata] [--nocache] [--geo CC]
+ *   npx tsx tabstack.ts extract-json <url> [json_schema] [--nocache] [--geo CC]
+ *   npx tsx tabstack.ts generate <url> <json_schema> <instructions> [--nocache] [--geo CC]
+ *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails "..."] [--data '{"key":"val"}']
  *
  * Requires: TABSTACK_API_KEY env var
  */
@@ -28,16 +28,27 @@ if (!apiKey) {
 const client = new Tabstack({ apiKey });
 
 // ---------------------------------------------------------------------------
+// Shared: parse --geo flag into geo_target option
+// ---------------------------------------------------------------------------
+function parseGeo(flags: Record<string, string | boolean>): object | undefined {
+  const geo = flags.geo;
+  if (typeof geo === "string") return { country: geo.toUpperCase() };
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // extract-markdown
 // ---------------------------------------------------------------------------
 async function extractMarkdown(
   url: string,
   metadata: boolean,
-  nocache: boolean
+  nocache: boolean,
+  geo_target?: object
 ): Promise<void> {
   const opts: any = {};
   if (metadata) opts.metadata = true;
   if (nocache) opts.nocache = true;
+  if (geo_target) opts.geo_target = geo_target;
 
   const result = await client.extract.markdown(url, opts);
   if (metadata && (result as any).metadata) {
@@ -54,7 +65,8 @@ async function extractMarkdown(
 async function extractJson(
   url: string,
   schemaArg?: string,
-  nocache?: boolean
+  nocache?: boolean,
+  geo_target?: object
 ): Promise<void> {
   let schema: object | undefined;
   if (schemaArg) {
@@ -67,6 +79,7 @@ async function extractJson(
   }
   const opts: any = {};
   if (nocache) opts.nocache = true;
+  if (geo_target) opts.geo_target = geo_target;
 
   const result = await client.extract.json(url, schema, opts);
   console.log(JSON.stringify(result, null, 2));
@@ -79,7 +92,8 @@ async function generate(
   url: string,
   schemaArg: string,
   instructions: string,
-  nocache: boolean
+  nocache: boolean,
+  geo_target?: object
 ): Promise<void> {
   let schema: object;
   try {
@@ -90,6 +104,7 @@ async function generate(
   }
   const opts: any = {};
   if (nocache) opts.nocache = true;
+  if (geo_target) opts.geo_target = geo_target;
 
   const result = await client.generate.json(url, schema, instructions, opts);
   console.log(JSON.stringify(result, null, 2));
@@ -102,11 +117,17 @@ async function generate(
 async function automate(
   task: string,
   url?: string,
-  maxIterations?: number
+  maxIterations?: number,
+  geo_target?: object,
+  guardrails?: string,
+  data?: object
 ): Promise<void> {
   const opts: any = {};
   if (url) opts.url = url;
   if (maxIterations) opts.maxIterations = maxIterations;
+  if (geo_target) opts.geo_target = geo_target;
+  if (guardrails) opts.guardrails = guardrails;
+  if (data) opts.data = data;
 
   const stream = client.agent.automate(task, opts);
 
@@ -114,33 +135,33 @@ async function automate(
 
   for await (const event of stream) {
     const eventType = (event as any).type;
-    const data = (event as any).data;
+    const eventData = (event as any).data;
 
     // Helper to get data fields — SDK uses EventData with .get() method
     const get = (key: string) => {
-      if (data && typeof data.get === "function") return data.get(key);
-      if (data && typeof data === "object") return data[key];
+      if (eventData && typeof eventData.get === "function") return eventData.get(key);
+      if (eventData && typeof eventData === "object") return eventData[key];
       return undefined;
     };
 
     switch (eventType) {
       case "agent:status":
-        console.error(`[status] ${get("message") ?? JSON.stringify(data)}`);
+        console.error(`[status] ${get("message") ?? JSON.stringify(eventData)}`);
         break;
       case "agent:action":
-        console.error(`[action] ${get("action") ?? JSON.stringify(data)}`);
+        console.error(`[action] ${get("action") ?? JSON.stringify(eventData)}`);
         break;
       case "task:completed":
-        finalAnswer = get("finalAnswer") ?? JSON.stringify(data, null, 2);
+        finalAnswer = get("finalAnswer") ?? JSON.stringify(eventData, null, 2);
         break;
       case "complete":
-        finalAnswer = finalAnswer ?? get("finalAnswer") ?? JSON.stringify(data, null, 2);
+        finalAnswer = finalAnswer ?? get("finalAnswer") ?? JSON.stringify(eventData, null, 2);
         break;
       case "task:aborted":
-        console.error(`[aborted] ${get("reason") ?? JSON.stringify(data)}`);
+        console.error(`[aborted] ${get("reason") ?? JSON.stringify(eventData)}`);
         break;
       case "error":
-        console.error(`[error] ${get("message") ?? JSON.stringify(data)}`);
+        console.error(`[error] ${get("message") ?? JSON.stringify(eventData)}`);
         break;
     }
   }
@@ -191,25 +212,26 @@ function parseFlags(args: string[]): {
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   const { positional, flags } = parseFlags(rest);
+  const geo_target = parseGeo(flags);
 
   switch (command) {
     case "extract-markdown": {
       const [url] = positional;
       if (!url) {
-        console.error("Usage: tabstack.ts extract-markdown <url> [--metadata] [--nocache]");
+        console.error("Usage: tabstack.ts extract-markdown <url> [--metadata] [--nocache] [--geo CC]");
         process.exit(1);
       }
-      await extractMarkdown(url, !!flags.metadata, !!flags.nocache).catch(handleError);
+      await extractMarkdown(url, !!flags.metadata, !!flags.nocache, geo_target).catch(handleError);
       break;
     }
 
     case "extract-json": {
       const [url, schema] = positional;
       if (!url) {
-        console.error("Usage: tabstack.ts extract-json <url> [json_schema] [--nocache]");
+        console.error("Usage: tabstack.ts extract-json <url> [json_schema] [--nocache] [--geo CC]");
         process.exit(1);
       }
-      await extractJson(url, schema, !!flags.nocache).catch(handleError);
+      await extractJson(url, schema, !!flags.nocache, geo_target).catch(handleError);
       break;
     }
 
@@ -217,24 +239,34 @@ async function main(): Promise<void> {
       const [url, schema, ...instrParts] = positional;
       const instructions = instrParts.join(" ");
       if (!url || !schema || !instructions) {
-        console.error("Usage: tabstack.ts generate <url> <json_schema> <instructions>");
+        console.error("Usage: tabstack.ts generate <url> <json_schema> <instructions> [--nocache] [--geo CC]");
         process.exit(1);
       }
-      await generate(url, schema, instructions, !!flags.nocache).catch(handleError);
+      await generate(url, schema, instructions, !!flags.nocache, geo_target).catch(handleError);
       break;
     }
 
     case "automate": {
       const task = positional.join(" ");
       if (!task) {
-        console.error("Usage: tabstack.ts automate <task> [--url <url>] [--max-iterations N]");
+        console.error("Usage: tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails \"...\"] [--data '{...}']");
         process.exit(1);
       }
       const url = flags.url as string | undefined;
       const maxIter = flags["max-iterations"]
         ? parseInt(flags["max-iterations"] as string, 10)
         : undefined;
-      await automate(task, url, maxIter).catch(handleError);
+      const guardrails = flags.guardrails as string | undefined;
+      let data: object | undefined;
+      if (typeof flags.data === "string") {
+        try {
+          data = JSON.parse(flags.data);
+        } catch (e) {
+          console.error(`ERROR: --data is not valid JSON: ${e}`);
+          process.exit(1);
+        }
+      }
+      await automate(task, url, maxIter, geo_target, guardrails, data).catch(handleError);
       break;
     }
 
