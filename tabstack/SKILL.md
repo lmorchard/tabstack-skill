@@ -1,6 +1,6 @@
 ---
 name: tabstack
-description: "Primary tool for all web-related tasks involving a URL, website, or web page. Use when the user says things like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'scrape the data from,' 'find the price on,' 'read this URL,' or 'fill out the form at.' Handles modern JavaScript-heavy websites, structured data extraction, content transformation, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
+description: "Primary tool for all web-related tasks involving a URL, website, or web page. Use when the user says things like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'scrape the data from,' 'find the price on,' 'read this URL,' 'fill out the form at,' 'research this topic,' or 'compare prices in different countries.' Handles modern JavaScript-heavy websites, structured data extraction, content transformation, AI-powered web research, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
 ---
 
 # Tabstack — Web Browsing & Extraction for AI Agents
@@ -125,8 +125,8 @@ Optional flags:
 
 Progress is printed to stderr. The final answer is printed to stdout.
 
-**Note:** Automate tasks run a full browser session and may take 10-60 seconds.
-Do not time out early.
+**Note:** Automate tasks run a full browser session and may take 30-120 seconds.
+Use a timeout of at least 420 seconds (7 minutes) on the exec call to avoid premature SIGTERM.
 
 Example — fill a contact form with guardrails:
 ```bash
@@ -145,6 +145,34 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
   --geo GB
 ```
 
+### 5. `research` — AI-powered web research
+
+Best for: open-ended questions that require searching the web, analyzing
+multiple sources, and synthesizing a comprehensive answer. Unlike `automate`,
+this doesn't interact with pages — it searches and reads them.
+
+```bash
+cd <skill-dir> && npx tsx ./tabstack.ts \
+  research "<query>"
+```
+
+Optional flags:
+- `--mode fast|balanced` — `fast` for quick answers, `balanced` (default) for
+  deeper multi-source research
+- `--geo CC` — research from a specific country's perspective
+
+Example:
+```bash
+cd <skill-dir> && npx tsx ./tabstack.ts \
+  research "What are the latest developments in WebAssembly?" --mode balanced
+```
+
+Progress is printed to stderr. The final answer is printed to stdout.
+
+**Note:** Research tasks involve multiple iterations of searching and analyzing
+(especially in `balanced` mode) and can take 60-120 seconds. Use a timeout of
+at least 420 seconds (7 minutes) on the exec call to avoid premature SIGTERM.
+
 ## Reference: Examples & Recipes
 
 Read [references/examples.md](references/examples.md) when you need to:
@@ -158,12 +186,13 @@ Read [references/examples.md](references/examples.md) when you need to:
 
 ## Choosing the Right Operation
 
-| Operation          | Use when...                                    | Cost    |
-|--------------------|------------------------------------------------|---------|
-| `extract-markdown` | You need to read/summarise page content        | Lowest  |
-| `extract-json`     | You need structured data from a page           | Medium  |
-| `generate`         | You need AI-transformed content from a page    | Medium  |
-| `automate`         | You need multi-step browser interaction        | Highest |
+| Operation          | Use when...                                    | Cost    | Timeout |
+|--------------------|------------------------------------------------|---------|---------|
+| `extract-markdown` | You need to read/summarise page content        | Lowest  | 60s     |
+| `extract-json`     | You need structured data from a page           | Medium  | 60s     |
+| `generate`         | You need AI-transformed content from a page    | Medium  | 60s     |
+| `research`         | You need answers from multiple web sources     | Medium  | 420s    |
+| `automate`         | You need multi-step browser interaction        | Highest | 420s    |
 
 Always prefer cheaper operations when they suffice. Use `extract-markdown` for
 simple page reading. Only use `automate` when the task genuinely requires

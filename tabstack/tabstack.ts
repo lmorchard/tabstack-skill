@@ -1,23 +1,25 @@
 #!/usr/bin/env npx tsx
 /**
- * tabstack.ts — CLI wrapper for the Tabstack API
+ * tabstack.ts — CLI wrapper for the Tabstack API (SDK v2)
  *
- * SDK method signatures (positional args, not options objects):
- *   client.extract.markdown(url, options?)
- *   client.extract.json(url, schema, options?)
- *   client.generate.json(url, schema, instructions, options?)
- *   client.agent.automate(task, options?)  — returns async iterable of events
+ * SDK v2 method signatures (all take options objects):
+ *   client.extract.markdown({ url, metadata?, nocache?, geo_target? })
+ *   client.extract.json({ url, json_schema?, nocache?, geo_target? })
+ *   client.generate.json({ url, json_schema, instructions, nocache?, geo_target? })
+ *   client.agent.automate({ task, url?, guardrails?, data?, maxIterations?, geo_target? })
+ *   client.agent.research({ query, mode?, geo_target? })
  *
  * Usage:
  *   npx tsx tabstack.ts extract-markdown <url> [--metadata] [--nocache] [--geo CC]
  *   npx tsx tabstack.ts extract-json <url> [json_schema] [--nocache] [--geo CC]
  *   npx tsx tabstack.ts generate <url> <json_schema> <instructions> [--nocache] [--geo CC]
- *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails "..."] [--data '{"key":"val"}']
+ *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails "..."] [--data '{...}']
+ *   npx tsx tabstack.ts research <query> [--mode fast|balanced] [--geo CC]
  *
  * Requires: TABSTACK_API_KEY env var
  */
 
-import { Tabstack } from "@tabstack/sdk";
+import Tabstack from "@tabstack/sdk";
 
 const apiKey = process.env.TABSTACK_API_KEY;
 if (!apiKey) {
@@ -45,12 +47,12 @@ async function extractMarkdown(
   nocache: boolean,
   geo_target?: object
 ): Promise<void> {
-  const opts: any = {};
-  if (metadata) opts.metadata = true;
-  if (nocache) opts.nocache = true;
-  if (geo_target) opts.geo_target = geo_target;
+  const body: any = { url };
+  if (metadata) body.metadata = true;
+  if (nocache) body.nocache = true;
+  if (geo_target) body.geo_target = geo_target;
 
-  const result = await client.extract.markdown(url, opts);
+  const result = await client.extract.markdown(body);
   if (metadata && (result as any).metadata) {
     console.log("--- metadata ---");
     console.log(JSON.stringify((result as any).metadata, null, 2));
@@ -68,20 +70,19 @@ async function extractJson(
   nocache?: boolean,
   geo_target?: object
 ): Promise<void> {
-  let schema: object | undefined;
+  const body: any = { url };
   if (schemaArg) {
     try {
-      schema = JSON.parse(schemaArg);
+      body.json_schema = JSON.parse(schemaArg);
     } catch (e) {
       console.error(`ERROR: json_schema is not valid JSON: ${e}`);
       process.exit(1);
     }
   }
-  const opts: any = {};
-  if (nocache) opts.nocache = true;
-  if (geo_target) opts.geo_target = geo_target;
+  if (nocache) body.nocache = true;
+  if (geo_target) body.geo_target = geo_target;
 
-  const result = await client.extract.json(url, schema, opts);
+  const result = await client.extract.json(body);
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -95,24 +96,25 @@ async function generate(
   nocache: boolean,
   geo_target?: object
 ): Promise<void> {
-  let schema: object;
+  let json_schema: object;
   try {
-    schema = JSON.parse(schemaArg);
+    json_schema = JSON.parse(schemaArg);
   } catch (e) {
     console.error(`ERROR: json_schema is not valid JSON: ${e}`);
     process.exit(1);
   }
-  const opts: any = {};
-  if (nocache) opts.nocache = true;
-  if (geo_target) opts.geo_target = geo_target;
+  const body: any = { url, json_schema, instructions };
+  if (nocache) body.nocache = true;
+  if (geo_target) body.geo_target = geo_target;
 
-  const result = await client.generate.json(url, schema, instructions, opts);
+  const result = await client.generate.json(body);
   console.log(JSON.stringify(result, null, 2));
 }
 
 // ---------------------------------------------------------------------------
 // automate
-// SDK returns an async iterable of AutomateEvent objects with .type and .data
+// Returns an SSE stream. We iterate over events and print progress,
+// then output the final answer.
 // ---------------------------------------------------------------------------
 async function automate(
   task: string,
@@ -122,47 +124,39 @@ async function automate(
   guardrails?: string,
   data?: object
 ): Promise<void> {
-  const opts: any = {};
-  if (url) opts.url = url;
-  if (maxIterations) opts.maxIterations = maxIterations;
-  if (geo_target) opts.geo_target = geo_target;
-  if (guardrails) opts.guardrails = guardrails;
-  if (data) opts.data = data;
+  const body: any = { task };
+  if (url) body.url = url;
+  if (maxIterations) body.maxIterations = maxIterations;
+  if (geo_target) body.geo_target = geo_target;
+  if (guardrails) body.guardrails = guardrails;
+  if (data) body.data = data;
 
-  const stream = client.agent.automate(task, opts);
+  const stream = await client.agent.automate(body);
 
   let finalAnswer: string | undefined;
 
-  for await (const event of stream) {
-    const eventType = (event as any).type;
-    const eventData = (event as any).data;
+  for await (const event of stream as any) {
+    const eventType = event.event ?? event.type;
+    const eventData = event.data ?? event;
 
-    // Helper to get data fields — SDK uses EventData with .get() method
     const get = (key: string) => {
       if (eventData && typeof eventData.get === "function") return eventData.get(key);
       if (eventData && typeof eventData === "object") return eventData[key];
       return undefined;
     };
 
-    switch (eventType) {
-      case "agent:status":
-        console.error(`[status] ${get("message") ?? JSON.stringify(eventData)}`);
-        break;
-      case "agent:action":
-        console.error(`[action] ${get("action") ?? JSON.stringify(eventData)}`);
-        break;
-      case "task:completed":
-        finalAnswer = get("finalAnswer") ?? JSON.stringify(eventData, null, 2);
-        break;
-      case "complete":
-        finalAnswer = finalAnswer ?? get("finalAnswer") ?? JSON.stringify(eventData, null, 2);
-        break;
-      case "task:aborted":
-        console.error(`[aborted] ${get("reason") ?? JSON.stringify(eventData)}`);
-        break;
-      case "error":
-        console.error(`[error] ${get("message") ?? JSON.stringify(eventData)}`);
-        break;
+    // SDK yields plain data objects without event type wrapper —
+    // detect completion by checking for finalAnswer/report fields.
+    const answer = get("finalAnswer") ?? get("report");
+    if (answer) {
+      finalAnswer = answer;
+    } else if (get("reason")) {
+      console.error(`[aborted] ${get("reason")}`);
+    } else if (get("action")) {
+      console.error(`[action] ${get("action")}`);
+    } else {
+      const msg = get("message");
+      if (msg) console.error(`[automate] ${msg}`);
     }
   }
 
@@ -170,6 +164,55 @@ async function automate(
     process.stdout.write(finalAnswer);
   } else {
     console.error("ERROR: automate stream ended without a final answer.");
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// research
+// New in SDK v2 — AI-powered web research with streaming progress.
+// ---------------------------------------------------------------------------
+async function research(
+  query: string,
+  mode?: string,
+  geo_target?: object
+): Promise<void> {
+  const body: any = { query };
+  if (mode) body.mode = mode;
+  if (geo_target) body.geo_target = geo_target;
+
+  const stream = await client.agent.research(body);
+
+  let finalAnswer: string | undefined;
+
+  for await (const event of stream as any) {
+    const eventType = event.event ?? event.type;
+    const eventData = event.data ?? event;
+
+    const get = (key: string) => {
+      if (eventData && typeof eventData.get === "function") return eventData.get(key);
+      if (eventData && typeof eventData === "object") return eventData[key];
+      return undefined;
+    };
+
+    // SDK yields plain data objects without event type wrapper —
+    // detect completion by checking for report/finalAnswer/answer fields.
+    const report = get("report") ?? get("finalAnswer") ?? get("answer");
+    if (report) {
+      finalAnswer = report;
+    } else if (get("reason")) {
+      console.error(`[aborted] ${get("reason")}`);
+    } else {
+      // Progress event
+      const msg = get("message");
+      if (msg) console.error(`[research] ${msg}`);
+    }
+  }
+
+  if (finalAnswer) {
+    process.stdout.write(finalAnswer);
+  } else {
+    console.error("ERROR: research stream ended without a final answer.");
     process.exit(1);
   }
 }
@@ -270,9 +313,20 @@ async function main(): Promise<void> {
       break;
     }
 
+    case "research": {
+      const query = positional.join(" ");
+      if (!query) {
+        console.error("Usage: tabstack.ts research <query> [--mode fast|balanced] [--geo CC]");
+        process.exit(1);
+      }
+      const mode = flags.mode as string | undefined;
+      await research(query, mode, geo_target).catch(handleError);
+      break;
+    }
+
     default:
       console.error(`Unknown command: ${command ?? "(none)"}`);
-      console.error("Commands: extract-markdown | extract-json | generate | automate");
+      console.error("Commands: extract-markdown | extract-json | generate | automate | research");
       process.exit(1);
   }
 }
