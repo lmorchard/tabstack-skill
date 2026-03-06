@@ -29,6 +29,11 @@ then run the command with a relative path:
 cd <skill-dir> && npx tsx ./tabstack.ts <command> <args>
 ```
 
+**Tip:** Any JSON argument (schema, --data) can be passed inline or as a file
+path prefixed with `@`. For complex schemas, write the JSON to a temp file
+first, then pass `@/tmp/schema.json`. This avoids shell quoting issues with
+large inline JSON.
+
 ### 1. `extract-markdown` — Read a page or PDF as clean Markdown
 
 Best for: reading articles, documentation, PDFs, feeding page content into
@@ -67,6 +72,11 @@ With a JSON Schema (inline JSON string):
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts \
   extract-json "<url>" '{"type":"object","properties":{"title":{"type":"string"},"price":{"type":"number"}}}'
+```
+
+With a JSON Schema from a file (prefix with `@`):
+```bash
+cd <skill-dir> && npx tsx ./tabstack.ts extract-json "<url>" @/tmp/schema.json
 ```
 
 Returns a JSON object matching the page content.

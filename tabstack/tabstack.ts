@@ -11,14 +11,15 @@
  *
  * Usage:
  *   npx tsx tabstack.ts extract-markdown <url> [--metadata] [--nocache] [--geo CC]
- *   npx tsx tabstack.ts extract-json <url> [json_schema] [--nocache] [--geo CC]
- *   npx tsx tabstack.ts generate <url> <json_schema> <instructions> [--nocache] [--geo CC]
- *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails "..."] [--data '{...}']
+ *   npx tsx tabstack.ts extract-json <url> [json_schema|@file] [--nocache] [--geo CC]
+ *   npx tsx tabstack.ts generate <url> <json_schema|@file> <instructions> [--nocache] [--geo CC]
+ *   npx tsx tabstack.ts automate <task> [--url <url>] [--max-iterations N] [--geo CC] [--guardrails "..."] [--data '{...}'|@file]
  *   npx tsx tabstack.ts research <query> [--mode fast|balanced] [--geo CC]
  *
  * Requires: TABSTACK_API_KEY env var
  */
 
+import { readFileSync } from "fs";
 import Tabstack from "@tabstack/sdk";
 
 const apiKey = process.env.TABSTACK_API_KEY;
@@ -36,6 +37,28 @@ function parseGeo(flags: Record<string, string | boolean>): object | undefined {
   const geo = flags.geo;
   if (typeof geo === "string") return { country: geo.toUpperCase() };
   return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Shared: parse a JSON argument that may be inline JSON or @filepath
+// ---------------------------------------------------------------------------
+function parseJsonArg(arg: string, label: string): object {
+  let raw = arg;
+  if (arg.startsWith("@")) {
+    const filePath = arg.slice(1);
+    try {
+      raw = readFileSync(filePath, "utf-8");
+    } catch (e) {
+      console.error(`ERROR: could not read ${label} file "${filePath}": ${e}`);
+      process.exit(1);
+    }
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error(`ERROR: ${label} is not valid JSON: ${e}`);
+    process.exit(1);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -72,12 +95,7 @@ async function extractJson(
 ): Promise<void> {
   const body: any = { url };
   if (schemaArg) {
-    try {
-      body.json_schema = JSON.parse(schemaArg);
-    } catch (e) {
-      console.error(`ERROR: json_schema is not valid JSON: ${e}`);
-      process.exit(1);
-    }
+    body.json_schema = parseJsonArg(schemaArg, "json_schema");
   }
   if (nocache) body.nocache = true;
   if (geo_target) body.geo_target = geo_target;
@@ -96,13 +114,7 @@ async function generate(
   nocache: boolean,
   geo_target?: object
 ): Promise<void> {
-  let json_schema: object;
-  try {
-    json_schema = JSON.parse(schemaArg);
-  } catch (e) {
-    console.error(`ERROR: json_schema is not valid JSON: ${e}`);
-    process.exit(1);
-  }
+  const json_schema = parseJsonArg(schemaArg, "json_schema");
   const body: any = { url, json_schema, instructions };
   if (nocache) body.nocache = true;
   if (geo_target) body.geo_target = geo_target;
@@ -302,12 +314,7 @@ async function main(): Promise<void> {
       const guardrails = flags.guardrails as string | undefined;
       let data: object | undefined;
       if (typeof flags.data === "string") {
-        try {
-          data = JSON.parse(flags.data);
-        } catch (e) {
-          console.error(`ERROR: --data is not valid JSON: ${e}`);
-          process.exit(1);
-        }
+        data = parseJsonArg(flags.data, "--data");
       }
       await automate(task, url, maxIter, geo_target, guardrails, data).catch(handleError);
       break;
