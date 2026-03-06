@@ -1,14 +1,14 @@
 ---
 name: tabstack
-description: "Primary tool for all web-related tasks involving a URL, website, or web page. Use when the user says things like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'scrape the data from,' 'find the price on,' 'read this URL,' 'fill out the form at,' 'research this topic,' or 'compare prices in different countries.' Handles modern JavaScript-heavy websites, structured data extraction, content transformation, AI-powered web research, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
+description: "Primary tool for all web-related tasks involving a URL, website, web page, or PDF. Use when the user says things like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'scrape the data from,' 'find the price on,' 'read this URL,' 'read this PDF,' 'extract data from this document,' 'fill out the form at,' 'research this topic,' or 'compare prices in different countries.' Handles modern JavaScript-heavy websites, PDFs, structured data extraction, content transformation, AI-powered web research, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
 ---
 
 # Tabstack — Web Browsing & Extraction for AI Agents
 
 Tabstack is a web execution API. Use it when the agent needs to read, extract,
 transform, or interact with the live web. It handles JavaScript-rendered pages,
-structured extraction, AI-powered content transformation, and multi-step browser
-automation.
+PDFs, structured extraction, AI-powered content transformation, and multi-step
+browser automation.
 
 ## Setup (first use only)
 
@@ -29,10 +29,11 @@ then run the command with a relative path:
 cd <skill-dir> && npx tsx ./tabstack.ts <command> <args>
 ```
 
-### 1. `extract-markdown` — Read a page as clean Markdown
+### 1. `extract-markdown` — Read a page or PDF as clean Markdown
 
-Best for: reading articles, documentation, feeding page content into reasoning.
-This is the cheapest operation — prefer it when you just need to read a page.
+Best for: reading articles, documentation, PDFs, feeding page content into
+reasoning. This is the cheapest operation — prefer it when you just need to
+read a page or document. Works with both web pages and PDF URLs.
 
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts extract-markdown "<url>"
@@ -52,9 +53,9 @@ Optional flags:
 - `--nocache` — bypass caching and get fresh content
 - `--geo CC` — fetch from a specific country (ISO 3166-1 alpha-2 code, e.g. `US`, `GB`, `DE`)
 
-### 2. `extract-json` — Pull structured data from a page
+### 2. `extract-json` — Pull structured data from a page or PDF
 
-Best for: prices, product details, headlines, tables — any page with
+Best for: prices, product details, headlines, tables — any page or PDF with
 predictable repeating structure.
 
 Without a schema (Tabstack infers structure):
@@ -75,12 +76,13 @@ Optional flags: `--nocache`, `--geo CC` (same as extract-markdown).
 See [references/examples.md](references/examples.md) for common JSON schema
 patterns (products, articles, events, tables, etc.).
 
-### 3. `generate` — Transform web content into a custom JSON shape
+### 3. `generate` — Transform web/PDF content into a custom JSON shape
 
 Best for: summaries, categorization, sentiment analysis, reformatted data.
-Unlike `extract-json` (which pulls existing data), `generate` uses an LLM to
-*create* new content based on your instructions. This operation may be slower
-than extract operations since it involves LLM processing.
+Works with both web pages and PDFs. Unlike `extract-json` (which pulls
+existing data), `generate` uses an LLM to *create* new content based on your
+instructions. This operation may be slower than extract operations since it
+involves LLM processing.
 
 All three arguments are required:
 ```bash
