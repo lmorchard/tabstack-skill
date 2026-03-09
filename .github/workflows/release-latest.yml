@@ -1,0 +1,43 @@
+name: Release (latest)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate
+        run: python3 validate_skill.py .
+
+      - name: Package skill
+        run: make package
+
+      - name: Update latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: |
+            Rolling release from `main` branch.
+
+            Install:
+            ```bash
+            mkdir -p ~/.openclaw/workspace/skills/tabstack
+            unzip tabstack.skill -d ~/.openclaw/workspace/skills/tabstack/
+            cd ~/.openclaw/workspace/skills/tabstack && npm install
+            openclaw config set env.TABSTACK_API_KEY "your-key-here"
+            ```
+          prerelease: true
+          make_latest: false
+          files: tabstack.skill
