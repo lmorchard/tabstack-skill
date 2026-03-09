@@ -1,14 +1,14 @@
 ---
 name: tabstack
-description: "Primary tool for all web-related tasks involving a URL, website, web page, or PDF. Use when the user says things like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'scrape the data from,' 'find the price on,' 'read this URL,' 'read this PDF,' 'extract data from this document,' 'fill out the form at,' 'research this topic,' or 'compare prices in different countries.' Handles modern JavaScript-heavy websites, PDFs, structured data extraction, content transformation, AI-powered web research, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
+description: "Primary tool for all web and PDF tasks. Use when the user mentions a URL, website, web page, or PDF document. Triggers on phrases like 'look up,' 'check this site,' 'what does this page say,' 'summarize this article,' 'read this PDF,' 'extract data from this document,' 'scrape the data from,' 'find the price on,' 'what's on this page,' 'get info from this site,' 'parse this PDF,' 'fill out the form at,' 'research this topic,' 'compare prices in different countries,' or 'read this link.' Handles modern JavaScript-heavy websites, PDF documents, structured data extraction, content transformation, AI-powered web research, and multi-step browser automation (login, form filling, clicking through pages). Prefer this over web_fetch for anything beyond reading a simple static page."
 ---
 
-# Tabstack — Web Browsing & Extraction for AI Agents
+# Tabstack — Web & PDF Tools for AI Agents
 
-Tabstack is a web execution API. Use it when the agent needs to read, extract,
-transform, or interact with the live web. It handles JavaScript-rendered pages,
-PDFs, structured extraction, AI-powered content transformation, and multi-step
-browser automation.
+Tabstack is a web execution API for reading, extracting, transforming, and
+interacting with web pages and PDF documents. It handles JavaScript-rendered
+sites, structured data extraction, AI-powered content transformation, and
+multi-step browser automation.
 
 ## Setup (first use only)
 
@@ -29,38 +29,34 @@ then run the command with a relative path:
 cd <skill-dir> && npx tsx ./tabstack.ts <command> <args>
 ```
 
-**Tip:** Any JSON argument (schema, --data) can be passed inline or as a file
-path prefixed with `@`. For complex schemas, write the JSON to a temp file
-first, then pass `@/tmp/schema.json`. This avoids shell quoting issues with
-large inline JSON.
+**Execution strategy:** Always run tabstack commands in the **foreground** —
+call `exec` and wait for completion. Background execution requires manual
+polling and is unreliable.
+
+**JSON arguments:** Any JSON argument (schema, --data) can be passed inline
+or as a file path prefixed with `@` (e.g. `@/tmp/schema.json`). Use file
+paths for complex schemas to avoid shell quoting issues.
 
 ### 1. `extract-markdown` — Read a page or PDF as clean Markdown
 
-Best for: reading articles, documentation, PDFs, feeding page content into
-reasoning. This is the cheapest operation — prefer it when you just need to
-read a page or document. Works with both web pages and PDF URLs.
+Best for: reading articles, documentation, PDF reports. This is the cheapest
+operation — prefer it when you just need to read content.
 
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts extract-markdown "<url>"
 ```
 
-Returns the page as Markdown with YAML frontmatter metadata.
-
-Add `--metadata` to get metadata as a separate JSON block (useful for
-programmatic access to title, author, etc.):
-
-```bash
-cd <skill-dir> && npx tsx ./tabstack.ts extract-markdown "<url>" --metadata
-```
+Returns the page/PDF as Markdown. For web pages, includes YAML frontmatter
+metadata (title, author, etc.).
 
 Optional flags:
 - `--metadata` — return metadata as a separate JSON block
 - `--nocache` — bypass caching and get fresh content
-- `--geo CC` — fetch from a specific country (ISO 3166-1 alpha-2 code, e.g. `US`, `GB`, `DE`)
+- `--geo CC` — fetch from a specific country (ISO 3166-1 alpha-2, e.g. `US`, `GB`)
 
 ### 2. `extract-json` — Pull structured data from a page or PDF
 
-Best for: prices, product details, headlines, tables — any page or PDF with
+Best for: prices, product details, tables, invoices, any document with
 predictable repeating structure.
 
 Without a schema (Tabstack infers structure):
@@ -68,42 +64,28 @@ Without a schema (Tabstack infers structure):
 cd <skill-dir> && npx tsx ./tabstack.ts extract-json "<url>"
 ```
 
-With a JSON Schema (inline JSON string):
-```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
-  extract-json "<url>" '{"type":"object","properties":{"title":{"type":"string"},"price":{"type":"number"}}}'
-```
-
-With a JSON Schema from a file (prefix with `@`):
+With a JSON Schema (inline or from file):
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts extract-json "<url>" @/tmp/schema.json
 ```
 
-Returns a JSON object matching the page content.
-
-Optional flags: `--nocache`, `--geo CC` (same as extract-markdown).
+Optional flags: `--nocache`, `--geo CC`.
 
 See [references/examples.md](references/examples.md) for common JSON schema
-patterns (products, articles, events, tables, etc.).
+patterns (products, articles, events, tables, contacts).
 
 ### 3. `generate` — Transform web/PDF content into a custom JSON shape
 
-Best for: summaries, categorization, sentiment analysis, reformatted data.
-Works with both web pages and PDFs. Unlike `extract-json` (which pulls
-existing data), `generate` uses an LLM to *create* new content based on your
-instructions. This operation may be slower than extract operations since it
-involves LLM processing.
+Best for: summaries, categorization, sentiment analysis, reformatting. Unlike
+`extract-json` (which pulls existing data), `generate` uses an LLM to *create*
+new content. May be slower due to LLM processing.
 
-All three arguments are required:
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts \
-  generate "<url>" "<json_schema>" "<instructions>"
+  generate "<url>" "<json_schema|@file>" "<instructions>"
 ```
 
-- `json_schema`: a JSON Schema object (inline JSON string)
-- `instructions`: natural language description of what to produce
-
-Optional flags: `--nocache`, `--geo CC` (same as extract-markdown).
+Optional flags: `--nocache`, `--geo CC`.
 
 Example — categorise and summarise HN posts:
 ```bash
@@ -119,7 +101,7 @@ instruction examples.
 ### 4. `automate` — Multi-step browser task in natural language
 
 Best for: tasks needing real browser interaction — clicking, navigating across
-pages, filling forms, or anything that can't be done with a single fetch.
+pages, filling forms. Does NOT support PDFs or `--geo`.
 
 ```bash
 cd <skill-dir> && npx tsx ./tabstack.ts \
@@ -129,16 +111,10 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
 Optional flags:
 - `--url <url>` — starting URL for the task
 - `--max-iterations N` — limit steps (default 50, range 1-100)
-- `--geo CC` — fetch from a specific country (e.g. `GB` for UK pricing)
-- `--guardrails "..."` — safety constraints for what the browser agent should
-  NOT do (e.g. `"browse only, don't click buy or submit forms"`)
-- `--data '{"key":"val"}'` — JSON context for form filling (e.g. name, email,
-  address fields the agent should use when filling forms)
+- `--guardrails "..."` — safety constraints (e.g. `"browse only, don't submit forms"`)
+- `--data '{"key":"val"}'|@file` — JSON context for form filling
 
-Progress is printed to stderr. The final answer is printed to stdout.
-
-**Note:** Automate tasks run a full browser session and may take 30-120 seconds.
-Use a timeout of at least 420 seconds (7 minutes) on the exec call to avoid premature SIGTERM.
+**Timeout:** May take 30-120 seconds. Use at least 420s exec timeout.
 
 Example — fill a contact form with guardrails:
 ```bash
@@ -149,23 +125,13 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
   --guardrails "Only fill and submit the contact form, do not navigate away"
 ```
 
-Example — compare prices across regions:
-```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
-  extract-json "https://example.com/product" \
-  '{"type":"object","properties":{"price":{"type":"number"},"currency":{"type":"string"}}}' \
-  --geo GB
-```
-
 ### 5. `research` — AI-powered web research
 
-Best for: open-ended questions that require searching the web, analyzing
-multiple sources, and synthesizing a comprehensive answer. Unlike `automate`,
-this doesn't interact with pages — it searches and reads them.
+Best for: open-ended questions requiring multiple web sources. Unlike
+`automate`, this doesn't interact with pages — it searches and reads them.
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
-  research "<query>"
+cd <skill-dir> && npx tsx ./tabstack.ts research "<query>"
 ```
 
 Optional flags:
@@ -173,45 +139,35 @@ Optional flags:
   deeper multi-source research
 - `--geo CC` — research from a specific country's perspective
 
-Example:
-```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
-  research "What are the latest developments in WebAssembly?" --mode balanced
-```
-
-Progress is printed to stderr. The final answer is printed to stdout.
-
-**Note:** Research tasks involve multiple iterations of searching and analyzing
-(especially in `balanced` mode) and can take 60-120 seconds. Use a timeout of
-at least 420 seconds (7 minutes) on the exec call to avoid premature SIGTERM.
+**Timeout:** May take 60-120 seconds. Use at least 420s exec timeout.
 
 ## Reference: Examples & Recipes
 
 Read [references/examples.md](references/examples.md) when you need to:
 
-- **Build a JSON schema** for `extract-json` — includes patterns for products,
-  articles, events, tables, and contacts
-- **Write effective instructions** for `generate` — includes recipes for
-  summarization, sentiment analysis, competitive analysis, and content digests
-- **Recover from a failed attempt** — if a simple command doesn't produce
-  good results, check the examples for a better approach
+- **Build a JSON schema** for `extract-json` — patterns for products, articles,
+  events, tables, contacts, invoices
+- **Write effective instructions** for `generate` — recipes for summarization,
+  sentiment analysis, competitive analysis, content digests
+- **Recover from a failed attempt** — if a command doesn't produce good
+  results, check for a better approach
 
 ## Choosing the Right Operation
 
 | Operation          | Use when...                                    | Cost    | Timeout |
 |--------------------|------------------------------------------------|---------|---------|
-| `extract-markdown` | You need to read/summarise page content        | Lowest  | 60s     |
-| `extract-json`     | You need structured data from a page           | Medium  | 60s     |
-| `generate`         | You need AI-transformed content from a page    | Medium  | 60s     |
-| `research`         | You need answers from multiple web sources     | Medium  | 420s    |
-| `automate`         | You need multi-step browser interaction        | Highest | 420s    |
+| `extract-markdown` | Read/summarise a page or PDF                   | Lowest  | 60s     |
+| `extract-json`     | Structured data from a page or PDF             | Medium  | 60s     |
+| `generate`         | AI-transformed content from a page or PDF      | Medium  | 60s     |
+| `research`         | Answers from multiple web sources              | Medium  | 420s    |
+| `automate`         | Multi-step browser interaction (no PDF)         | Highest | 420s    |
 
-Always prefer cheaper operations when they suffice. Use `extract-markdown` for
-simple page reading. Only use `automate` when the task genuinely requires
-clicking, navigating, or form interaction.
+Prefer cheaper operations when they suffice. Use `extract-markdown` for
+simple reading. Only use `automate` when the task requires clicking,
+navigating, or form interaction.
 
-Inform the user if a task will trigger multiple `automate` calls, as these are
-the most expensive.
+Inform the user before triggering multiple `automate` calls — they are the
+most expensive.
 
 ## Error Handling
 
