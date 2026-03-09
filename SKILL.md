@@ -26,7 +26,7 @@ All operations are run via the `exec` tool. First `cd` into the skill directory,
 then run the command with a relative path:
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts <command> <args>
+<skill-dir>/scripts/run.sh <command> <args>
 ```
 
 **Execution strategy:** Always run tabstack commands in the **foreground** —
@@ -43,7 +43,7 @@ Best for: reading articles, documentation, PDF reports. This is the cheapest
 operation — prefer it when you just need to read content.
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts extract-markdown "<url>"
+<skill-dir>/scripts/run.sh extract-markdown "<url>"
 ```
 
 Returns the page/PDF as Markdown. For web pages, includes YAML frontmatter
@@ -61,12 +61,12 @@ predictable repeating structure.
 
 Without a schema (Tabstack infers structure):
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts extract-json "<url>"
+<skill-dir>/scripts/run.sh extract-json "<url>"
 ```
 
 With a JSON Schema (inline or from file):
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts extract-json "<url>" @/tmp/schema.json
+<skill-dir>/scripts/run.sh extract-json "<url>" @/tmp/schema.json
 ```
 
 Optional flags: `--nocache`, `--geo CC`.
@@ -81,7 +81,7 @@ Best for: summaries, categorization, sentiment analysis, reformatting. Unlike
 new content. May be slower due to LLM processing.
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
+<skill-dir>/scripts/run.sh \
   generate "<url>" "<json_schema|@file>" "<instructions>"
 ```
 
@@ -89,7 +89,7 @@ Optional flags: `--nocache`, `--geo CC`.
 
 Example — categorise and summarise HN posts:
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
+<skill-dir>/scripts/run.sh \
   generate "https://news.ycombinator.com" \
   '{"type":"object","properties":{"stories":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"category":{"type":"string"},"summary":{"type":"string"}}}}}}' \
   "For each story, categorize as tech/business/science/other and write a one-sentence summary"
@@ -104,7 +104,7 @@ Best for: tasks needing real browser interaction — clicking, navigating across
 pages, filling forms. Does NOT support PDFs or `--geo`.
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
+<skill-dir>/scripts/run.sh \
   automate "<natural language task>" --url "<url>"
 ```
 
@@ -120,7 +120,7 @@ Optional flags:
 
 Example — fill a contact form with guardrails:
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
+<skill-dir>/scripts/run.sh \
   automate "Fill out the contact form with my information" \
   --url "https://example.com/contact" \
   --data '{"name":"Alex","email":"alex@example.com","message":"Hello"}' \
@@ -129,7 +129,7 @@ cd <skill-dir> && npx tsx ./tabstack.ts \
 
 Example — simple search (no URL, uses built-in web search):
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts \
+<skill-dir>/scripts/run.sh \
   automate "Find the current price of a MacBook Air M4"
 ```
 
@@ -152,7 +152,7 @@ Use cases:
 - Competitive research ("Compare X vs Y vs Z")
 
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts research "<query>"
+<skill-dir>/scripts/run.sh research "<query>"
 ```
 
 Optional flags:
@@ -164,12 +164,12 @@ Optional flags:
 
 Example — quick factual lookup:
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts research "What is the current LTS version of Node.js?" --mode fast
+<skill-dir>/scripts/run.sh research "What is the current LTS version of Node.js?" --mode fast
 ```
 
 Example — deep research:
 ```bash
-cd <skill-dir> && npx tsx ./tabstack.ts research "Compare WebSocket vs SSE vs long polling for real-time web applications"
+<skill-dir>/scripts/run.sh research "Compare WebSocket vs SSE vs long polling for real-time web applications"
 ```
 
 ## Reference: Examples & Recipes

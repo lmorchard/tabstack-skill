@@ -1,5 +1,5 @@
 SKILL_NAME := tabstack
-SKILL_FILES := SKILL.md tabstack.ts package.json package-lock.json references/
+SKILL_FILES := SKILL.md package.json package-lock.json references/ scripts/
 
 validate:
 	@python3 validate_skill.py .
