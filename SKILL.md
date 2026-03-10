@@ -242,8 +242,10 @@ The skill will exit with an error if the key is not set.
   to constrain what the browser can do (e.g. `"browse only, don't submit
   forms"`).
 
-- **Dependencies**: This skill installs `@tabstack/sdk` and `tsx` from npm.
-  A `package-lock.json` is provided for reproducible installs.
+- **Dependencies**: This skill installs `@tabstack/sdk` and `tsx` from the
+  public npm registry. A `package-lock.json` is provided to pin exact
+  versions for reproducible installs. The `@tabstack/sdk` package is
+  published by [Mozilla](https://github.com/Mozilla-Ocho/tabstack-typescript).
 
 - **No persistence**: The skill does not modify agent configuration, store
   credentials, or run outside of its own directory.
