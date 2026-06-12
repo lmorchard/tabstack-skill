@@ -2,7 +2,14 @@
 
 JSON schema examples and generate instructions for common use cases.
 
-## extract-json Schemas
+**`extract json` vs `generate json`:** use `extract json` to pull data that
+**already exists** on the page in a predictable shape (prices, tables, listings,
+contacts, invoices) — give it a schema describing what to find. Use
+`generate json` to **create new content** from the page (summaries,
+classifications, digests) — give it a schema plus instructions for what to
+produce.
+
+## extract json Schemas
 
 ### News/blog article list
 
@@ -109,6 +116,54 @@ JSON schema examples and generate instructions for common use cases.
 }
 ```
 
+### Search results / link list
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "snippet": { "type": "string" }
+        }
+      }
+    }
+  }
+}
+```
+
+### Invoice / receipt
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "vendor": { "type": "string" },
+    "invoice_number": { "type": "string" },
+    "date": { "type": "string" },
+    "currency": { "type": "string" },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "quantity": { "type": "number" },
+          "unit_price": { "type": "number" },
+          "amount": { "type": "number" }
+        }
+      }
+    },
+    "total": { "type": "number" }
+  }
+}
+```
+
 ## generate Instructions
 
 Effective instructions are specific about what to produce and how to transform the source content.
@@ -142,3 +197,9 @@ Schema: `{products: [{name, price, pros, cons, verdict}]}`
 Schema: `{digest: {title, key_points, action_items, tldr}}`
 
 > "Create a digest of this page. Extract 3-5 key points as bullet-length strings, any action items mentioned, and a single-sentence TLDR."
+
+### Translate / localize
+
+Schema: `{title, body, source_language}`
+
+> "Detect the source language, then translate the article's title and body into English. Preserve paragraph breaks."

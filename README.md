@@ -7,23 +7,27 @@ automation capabilities via the [Tabstack API](https://docs.tabstack.ai/).
 Also works with [nanobot](https://github.com/HKUDS/nanobot) and other
 frameworks that use the OpenClaw skill format.
 
-Uses `@tabstack/sdk` v2.
+The skill drives the official [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli)
+— a single standalone Go binary — by shelling out to it directly.
 
 ## What It Does
 
-| Command            | Purpose                                    | Cost    | Timeout |
-|--------------------|--------------------------------------------|---------|---------|
-| `extract-markdown` | Read a page or PDF as clean Markdown       | Lowest  | 60s     |
-| `extract-json`     | Pull structured data from a page or PDF    | Medium  | 60s     |
-| `generate`         | AI-transform web/PDF content into JSON     | Medium  | 60s     |
-| `research`         | AI-powered multi-source web research       | Medium  | 420s    |
-| `automate`         | Multi-step browser automation or web search | Highest | 420s    |
+| Command                 | Purpose                                     | Cost    | Timeout |
+|-------------------------|---------------------------------------------|---------|---------|
+| `extract markdown`      | Read a page or PDF as clean Markdown        | Lowest  | 60s     |
+| `extract json`          | Pull structured data from a page or PDF     | Medium  | 60s     |
+| `generate json`         | AI-transform web/PDF content into JSON      | Medium  | 60s     |
+| `agent research`        | AI-powered multi-source web research        | Medium  | 420s    |
+| `agent automate`        | Multi-step browser automation or web search | Highest | 420s    |
 
-All extract/generate commands support `--geo CC` for region-specific content.
+The extract, generate, and `agent automate` commands support `--geo CC` for
+region-specific content; `agent research` does not. Extract and generate also
+take `--effort min|standard|max` to trade cost against thoroughness.
 
-The `automate` command supports `--guardrails` (safety constraints) and
+The `agent automate` command supports `--guardrails` (safety constraints) and
 `--data` (JSON context for form filling). When called without `--url`, it
-uses built-in web search — useful for simple factual lookups.
+uses built-in web search — useful for simple factual lookups. A paused
+automation can be resumed or cancelled with `agent input <request-id>`.
 
 JSON arguments (schemas, --data) can be passed inline or as a file path
 prefixed with `@` (e.g. `@/tmp/schema.json`).
@@ -31,7 +35,8 @@ prefixed with `@` (e.g. `@/tmp/schema.json`).
 ## Requirements
 
 - [OpenClaw](https://docs.openclaw.ai/) gateway running (or compatible framework)
-- Node.js >= 20 (available inside the OpenClaw container)
+- The [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli) installed
+  and on the agent's PATH (prebuilt binary, `go install`, or build from source)
 - A [Tabstack API key](https://tabstack.ai)
 
 ## Install Location
@@ -54,12 +59,11 @@ Copy the skill files into your OpenClaw workspace:
 
 ```bash
 mkdir -p ~/.openclaw/workspace/skills/tabstack
-cp -r SKILL.md package.json package-lock.json scripts/ references/ \
-  ~/.openclaw/workspace/skills/tabstack/
-cd ~/.openclaw/workspace/skills/tabstack && npm install
+cp -r SKILL.md references/ ~/.openclaw/workspace/skills/tabstack/
 ```
 
-Set your API key:
+Make sure the `tabstack` CLI is installed and on PATH (see
+[Requirements](#requirements)), then set your API key:
 
 ```bash
 openclaw config set env.TABSTACK_API_KEY "your-key-here"
@@ -72,7 +76,6 @@ Restart the gateway to pick up the new skill.
 ```bash
 mkdir -p ~/.openclaw/workspace/skills/tabstack
 unzip tabstack.skill -d ~/.openclaw/workspace/skills/tabstack/
-cd ~/.openclaw/workspace/skills/tabstack && npm install
 openclaw config set env.TABSTACK_API_KEY "your-key-here"
 ```
 
@@ -104,20 +107,19 @@ make install
 1. OpenClaw discovers `SKILL.md` in the workspace skills directory
 2. The skill's `description` tells the agent when to use it
 3. When triggered, the agent reads SKILL.md for instructions
-4. The agent calls `scripts/run.sh <command>` via the `exec` tool
-5. The wrapper script runs the Tabstack SDK CLI and returns results to stdout
+4. The agent calls `tabstack <command>` directly via the `exec` tool
+5. The `tabstack` CLI talks to the Tabstack API and returns results to stdout
 
 ## Skill Files
 
 ```
 SKILL.md              — Skill definition and agent instructions
-package.json          — Dependencies (@tabstack/sdk ^2.2.0, tsx)
-scripts/
-  run.sh              — Entry point (called by the agent)
-  tabstack.ts         — CLI wrapper for the Tabstack SDK (v2)
 references/
   examples.md         — JSON schema patterns and generate recipes
 ```
+
+The agent invokes the `tabstack` CLI directly; the skill ships no wrapper
+code or dependencies of its own.
 
 ## Repository Files
 

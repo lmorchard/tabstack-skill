@@ -16,15 +16,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - name: Validate skill structure
         run: python3 validate_skill.py .
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Check TypeScript compiles
-        run: npx tsx --version && npx tsx scripts/tabstack.ts --help || true
