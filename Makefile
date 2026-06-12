@@ -1,5 +1,5 @@
 SKILL_NAME := tabstack
-SKILL_FILES := SKILL.md package.json package-lock.json references/ scripts/
+SKILL_FILES := SKILL.md references/
 
 validate:
 	@python3 validate_skill.py .
@@ -11,4 +11,3 @@ package: validate
 install: package
 	mkdir -p ~/.openclaw/workspace/skills/$(SKILL_NAME)
 	unzip -o $(SKILL_NAME).skill -d ~/.openclaw/workspace/skills/$(SKILL_NAME)/
-	cd ~/.openclaw/workspace/skills/$(SKILL_NAME) && npm install

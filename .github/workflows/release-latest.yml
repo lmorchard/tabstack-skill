@@ -35,7 +35,6 @@ jobs:
             ```bash
             mkdir -p ~/.openclaw/workspace/skills/tabstack
             unzip tabstack.skill -d ~/.openclaw/workspace/skills/tabstack/
-            cd ~/.openclaw/workspace/skills/tabstack && npm install
             openclaw config set env.TABSTACK_API_KEY "your-key-here"
             ```
           prerelease: true
