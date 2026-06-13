@@ -1,11 +1,14 @@
-# tabstack — OpenClaw Skill
+# tabstack — Agent Skill
 
-An [OpenClaw](https://docs.openclaw.ai/) skill that gives your agent web
-browsing, data extraction, content transformation, web research, and browser
-automation capabilities via the [Tabstack API](https://docs.tabstack.ai/).
+A portable [agent skill](https://code.claude.com/docs/en/skills) (the
+`SKILL.md` format) that gives your agent web browsing, data extraction, content
+transformation, web research, and browser automation via the
+[Tabstack API](https://docs.tabstack.ai/).
 
-Also works with [nanobot](https://github.com/HKUDS/nanobot) and other
-frameworks that use the OpenClaw skill format.
+Works with any runtime that reads the `SKILL.md` format — including
+[Claude Code](https://code.claude.com/docs/en/skills),
+[OpenClaw](https://docs.openclaw.ai/), and
+[nanobot](https://github.com/HKUDS/nanobot).
 
 The skill drives the official [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli)
 — a single standalone Go binary — by shelling out to it directly.
@@ -34,49 +37,44 @@ prefixed with `@` (e.g. `@/tmp/schema.json`).
 
 ## Requirements
 
-- [OpenClaw](https://docs.openclaw.ai/) gateway running (or compatible framework)
+- A `SKILL.md`-compatible agent runtime (e.g. Claude Code, OpenClaw, nanobot)
 - The [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli) installed
   and on the agent's PATH (prebuilt binary, `go install`, or build from source)
 - A [Tabstack API key](https://tabstack.ai)
 
 ## Install Location
 
-OpenClaw has two skill directories:
+Each runtime has its own skills directory — drop the skill into the one your
+runtime scans. Common locations:
 
-- **`~/.openclaw/workspace/skills/`** — per-agent "workbench" for development
-  and testing. Highest priority — overrides same-named skills elsewhere.
-  **Use this for manual installs.**
-- **`~/.openclaw/skills/`** — shared library for stable, globally installed
-  skills. Used by `clawhub install` and similar package managers.
+- **Claude Code:** `~/.claude/skills/tabstack/`
+- **OpenClaw:** `~/.openclaw/workspace/skills/tabstack/` (per-agent workbench,
+  highest priority) or `~/.openclaw/skills/tabstack/` (shared, used by
+  `clawhub install`)
 
-The install instructions below use the workspace path. If you want the skill
-available to all agents on the system, use `~/.openclaw/skills/tabstack/`
-instead.
+The examples below use `$SKILLS_DIR` — set it to your runtime's path, e.g.
+`export SKILLS_DIR=~/.claude/skills`.
 
 ## Install from Source
 
-Copy the skill files into your OpenClaw workspace:
+Copy the skill files into your runtime's skills directory:
 
 ```bash
-mkdir -p ~/.openclaw/workspace/skills/tabstack
-cp -r SKILL.md references/ ~/.openclaw/workspace/skills/tabstack/
+mkdir -p "$SKILLS_DIR/tabstack"
+cp -r SKILL.md references/ "$SKILLS_DIR/tabstack/"
 ```
 
 Make sure the `tabstack` CLI is installed and on PATH (see
-[Requirements](#requirements)), then set your API key:
-
-```bash
-openclaw config set env.TABSTACK_API_KEY "your-key-here"
-```
-
-Restart the gateway to pick up the new skill.
+[Requirements](#requirements)), then set your API key — see
+[the SKILL.md Setup section](SKILL.md) for the options (`tabstack auth login`,
+`TABSTACK_API_KEY`, or a runtime-specific mechanism). Reload/restart your
+runtime so it picks up the new skill.
 
 ## Install from .skill File
 
 ```bash
-mkdir -p ~/.openclaw/workspace/skills/tabstack
-unzip tabstack.skill -d ~/.openclaw/workspace/skills/tabstack/
-openclaw config set env.TABSTACK_API_KEY "your-key-here"
+mkdir -p "$SKILLS_DIR/tabstack"
+unzip tabstack.skill -d "$SKILLS_DIR/tabstack/"
 ```
 
 ## Development
@@ -94,17 +92,19 @@ make package
 ```
 
 This creates `tabstack.skill` (a zip archive containing only the skill files)
-that can be shared with other OpenClaw users.
+that can be shared with other users.
 
-Install locally:
+Install locally (defaults to the OpenClaw workspace; override `SKILLS_DIR` for
+another runtime):
 
 ```bash
-make install
+make install                              # ~/.openclaw/workspace/skills/tabstack
+make install SKILLS_DIR=~/.claude/skills  # Claude Code
 ```
 
 ## How It Works
 
-1. OpenClaw discovers `SKILL.md` in the workspace skills directory
+1. Your agent runtime discovers `SKILL.md` in its skills directory
 2. The skill's `description` tells the agent when to use it
 3. When triggered, the agent reads SKILL.md for instructions
 4. The agent calls `tabstack <command>` directly via the `exec` tool
@@ -125,7 +125,7 @@ code or dependencies of its own.
 
 ```
 Makefile              — validate, package, install targets
-validate_skill.py     — Skill structure validator (from OpenClaw)
+validate_skill.py     — SKILL.md frontmatter validator
 README.md             — This file
 LICENSE               — MIT
 ```

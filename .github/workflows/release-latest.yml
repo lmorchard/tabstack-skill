@@ -31,12 +31,15 @@ jobs:
           body: |
             Rolling release from `main` branch.
 
-            Install:
+            Install into your agent runtime's skills directory (e.g.
+            `~/.claude/skills` for Claude Code, `~/.openclaw/workspace/skills`
+            for OpenClaw):
             ```bash
-            mkdir -p ~/.openclaw/workspace/skills/tabstack
-            unzip tabstack.skill -d ~/.openclaw/workspace/skills/tabstack/
-            openclaw config set env.TABSTACK_API_KEY "your-key-here"
+            SKILLS_DIR=~/.claude/skills   # adjust for your runtime
+            mkdir -p "$SKILLS_DIR/tabstack"
+            unzip tabstack.skill -d "$SKILLS_DIR/tabstack/"
             ```
+            Then set your `TABSTACK_API_KEY` (see the skill's Setup section).
           prerelease: true
           make_latest: false
           files: tabstack.skill

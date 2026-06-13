@@ -28,11 +28,17 @@ Verify it is available:
 tabstack --version
 ```
 
-Set your API key (the skill exits with an error if it is unset):
+Make sure your API key is set. The CLI reads `TABSTACK_API_KEY` from the
+environment (or a config file written by `tabstack auth login`). Use whichever
+fits your agent runtime:
 
 ```bash
-openclaw config set env.TABSTACK_API_KEY "your-key-here"
+tabstack auth login                              # interactive; writes ~/.config/tabstack/config.toml (0600)
+export TABSTACK_API_KEY="your-key-here"          # plain environment variable
+openclaw config set env.TABSTACK_API_KEY "..."   # OpenClaw, for example
 ```
+
+The skill exits with an error if no key is available.
 
 ## Invocation
 
@@ -259,11 +265,10 @@ On `automate` failures, retry once. If it fails again, fall back to
 This skill requires a `TABSTACK_API_KEY` to function. Get one from
 [tabstack.ai](https://tabstack.ai) (Mozilla-backed, free tier available).
 
-Set the key via the OpenClaw CLI:
-
-```bash
-openclaw config set env.TABSTACK_API_KEY "your-key-here"
-```
+Provide the key however your agent runtime exposes secrets — see
+[Setup](#setup-first-use-only) for the options (`tabstack auth login`, the
+`TABSTACK_API_KEY` environment variable, or a runtime-specific mechanism such
+as `openclaw config set env.TABSTACK_API_KEY`).
 
 The skill will exit with an error if the key is not set.
 
