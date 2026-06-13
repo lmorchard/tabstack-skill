@@ -7,8 +7,9 @@ transformation, web research, and browser automation via the
 
 Works with any runtime that reads the `SKILL.md` format — including
 [Claude Code](https://code.claude.com/docs/en/skills),
-[OpenClaw](https://docs.openclaw.ai/), and
-[nanobot](https://github.com/HKUDS/nanobot).
+[OpenClaw](https://docs.openclaw.ai/),
+[nanobot](https://github.com/HKUDS/nanobot), and
+[Hermes](https://hermes-agent.nousresearch.com/).
 
 The skill drives the official [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli)
 — a single standalone Go binary — by shelling out to it directly.
@@ -37,7 +38,7 @@ prefixed with `@` (e.g. `@/tmp/schema.json`).
 
 ## Requirements
 
-- A `SKILL.md`-compatible agent runtime (e.g. Claude Code, OpenClaw, nanobot)
+- A `SKILL.md`-compatible agent runtime (e.g. Claude Code, OpenClaw, nanobot, Hermes)
 - The [`tabstack` CLI](https://github.com/Mozilla-Ocho/tabstack-cli) installed
   and on the agent's PATH (prebuilt binary, `go install`, or build from source)
 - A [Tabstack API key](https://tabstack.ai)
